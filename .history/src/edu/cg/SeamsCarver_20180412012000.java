@@ -1,6 +1,7 @@
 package edu.cg;
 
 import java.awt.image.BufferedImage;
+import java.nio.Buffer;
 import java.util.*;
 
 import java.awt.Color;
@@ -62,7 +63,6 @@ public class SeamsCarver extends ImageProcessor {
 		this.minPathsArray = new int[this.inHeight][this.inWidth];
 		this.seamsList = new ArrayList<Integer[]>();
 		this.initXIndices();
-		System.out.println("522");
 		for (; this.seamsRemoved < this.numOfSeams; this.seamsRemoved++) {
 			calculateM_Matrix();
 			removeSeam();
@@ -85,7 +85,6 @@ public class SeamsCarver extends ImageProcessor {
 		this.forEach((y, x) -> {
 			this.setMinPath(y, x);
 		});
-		this.popForEachParameters();
 	}
 
 	//set values for m matrix and patharrays
@@ -112,7 +111,7 @@ public class SeamsCarver extends ImageProcessor {
 
 		long leftSum = (x > 0) ? M_Matrix[y - 1][x - 1] : 0;
 		long rightSum = M_Matrix[y - 1][x];
-		long verticalSum = (x + 1 < inWidth - this.seamsRemoved) ? M_Matrix[y - 1][x + 1] : Long.MAX_VALUE;
+		long verticalSum = (x + 1 < inWidth - this.seamsRemoved) ? M_Matrix[y - 1][x + 1] : 0;
 		long cLeft, cVertical, cRight;
 
 		cLeft = cVertical = cRight = (x > 0 & x + 1 < this.inWidth - this.seamsRemoved)
@@ -129,7 +128,7 @@ public class SeamsCarver extends ImageProcessor {
 		leftSum += cLeft;
 		rightSum += cRight;
 		verticalSum += cVertical;
-		//return mininal path
+		//return mininal path 
 		MinPixelTupple min = new MinPixelTupple(verticalSum, x);
 		if (leftSum < verticalSum) {
 			if (leftSum < rightSum) {
@@ -161,23 +160,15 @@ public class SeamsCarver extends ImageProcessor {
 		seamsList.add(seam);
 	}
 
-	private void shiftRowLeft(int y, int seamX) {
-		for (int x = seamX + 1; x < this.inWidth - this.seamsRemoved; ++x) {
-			this.xIndices[y][x - 1] = this.xIndices[y][x];
-			this.greyImg[y][x - 1] = this.greyImg[y][x];
+	//shift working img to removed seam picked fromworking img
+	private void shiftRowLeft(int y, int startIndex) {
+		for (int x = startIndex; x < inWidth - seamsRemoved; x++) {
+			xIndices[y][x - 1] = xIndices[y][x];
+			greyImg[y][x - 1] = greyImg[y][x];
 		}
-
 	}
 
-	//shift working img to removed seam picked fromworking img
-	// private void shiftRowLeft(int y, int startIndex) {
-	//  for (int x = startIndex; x < inWidth - seamsRemoved; x++) {
-	//      xIndices[y][x - 1] = xIndices[y][x];
-	//      greyImg[y][x - 1] = greyImg[y][x];
-	//  }
-	// }
-
-	//find min value out of given row
+	//
 	private int findMinRow() {
 		int minRow = 0;
 		for (int y = 0; y < inWidth - seamsRemoved; y++) {
@@ -188,7 +179,6 @@ public class SeamsCarver extends ImageProcessor {
 		return minRow;
 	}
 
-	//gray scale an img
 	public int[][] getGrayScaleIMG() {
 		BufferedImage graySacle = this.greyscale();
 		int[][] grayScaleArrayImg = new int[inHeight][inWidth];
@@ -203,101 +193,18 @@ public class SeamsCarver extends ImageProcessor {
 		return resizeOp.apply();
 	}
 
-	// // MARK: Unimplemented methods
-	// //TODO:countinue from here
-	// private BufferedImage reduceImageWidth() {
-	//  seamsList.forEach((seam) -> {
+	// MARK: Unimplemented methods
+	//TODO:countinue from here
+	private BufferedImage reduceImageWidth() {
+		seamsList.forEach((seam) -> {
 
-	//  });
-	//  return null;
-	// }
+		});
+		return null;
+	}
 
 	private BufferedImage increaseImageWidth() {
-		//TODO: continue from here
 		//TODO: Implement this method, remove the exception.
 		throw new UnimplementedMethodException("increaseImageWidth");
-	}
-
-	private BufferedImage reduceImageWidth() {
-		this.logger.log("reduces image width by " + this.numOfSeams + " pixels.");
-		int[][] image = this.duplicateWorkingImageAs2DArray();
-		seamsList.forEach((seam) -> {
-			this.forEachHeight((y) -> {
-				int x = seam[y.intValue()];
-				int rgbMid = image[y.intValue()][x];
-				int rgbRight;
-				int rgbMix;
-				if (x > 0) {
-					rgbRight = image[y.intValue()][x - 1];
-					rgbMix = mixRGB(rgbMid, rgbRight);
-					image[y.intValue()][x - 1] = rgbMix;
-				}
-
-				if (x + 1 < this.inWidth) {
-					rgbRight = image[y.intValue()][x + 1];
-					rgbMix = mixRGB(rgbMid, rgbRight);
-					image[y.intValue()][x + 1] = rgbMix;
-				}
-
-			});
-		});
-
-		BufferedImage ans = this.newEmptyOutputSizedImage();
-		this.pushForEachParameters();
-		this.setForEachWidth(this.outWidth);
-		this.forEach((y, x) -> {
-			int originalX = this.xIndices[y.intValue()][x.intValue()];
-			int rgb = image[y.intValue()][originalX];
-			Color c = new Color(getRed(rgb), getGreen(rgb), getBlue(rgb));
-			ans.setRGB(x.intValue(), y.intValue(), c.getRGB());
-		});
-		this.popForEachParameters();
-		return ans;
-	}
-
-	private int[][] duplicateWorkingImageAs2DArray() {
-		int[][] image = new int[this.inHeight][this.inWidth];
-		this.forEach((y, x) -> {
-			Color c = new Color(this.workingImage.getRGB(x.intValue(), y.intValue()));
-			int r = c.getRed();
-			int g = c.getGreen();
-			int b = c.getBlue();
-			image[y.intValue()][x.intValue()] = getRGB(r, g, b);
-		});
-		return image;
-	}
-
-	private static int getRGB(int r, int g, int b) {
-		return r << 16 | g << 8 | b;
-	}
-
-	private static int mixRGB(int rgb1, int rgb2) {
-		int r = (getRed(rgb1) + getRed(rgb2)) / 2;
-		int g = (getGreen(rgb1) + getGreen(rgb2)) / 2;
-		int b = (getBlue(rgb1) + getBlue(rgb2)) / 2;
-		return getRGB(r, g, b);
-	}
-
-	private static int getRed(int rgb) {
-		return rgb >> 16;
-	}
-
-	private static int getGreen(int rgb) {
-		return rgb >> 8 & 255;
-	}
-
-	private static int getBlue(int rgb) {
-		return rgb & 255;
-	}
-
-	private static class MinCost {
-		final long min;
-		final int minX;
-
-		MinCost(long min, int minX) {
-			this.min = min;
-			this.minX = minX;
-		}
 	}
 
 	public BufferedImage showSeams(int seamColorRGB) {
